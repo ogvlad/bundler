@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="NRG.BundlerRunOnSave..1cf4237e-db8f-4822-be22-0c5a7a6f6038" Version="1.0" Language="en-US" Publisher="NRG Soft" />
+    <DisplayName>NRG.BundlerRunOnSave</DisplayName>
+    <Description xml:space="preserve">When you save a .less, .sass, .css, .js, .coffee or .bundle file, this extension will run bundler if it is installed in the project.</Description>
+    <Icon>Resources\Package.ico</Icon>
+    <PreviewImage>ServiceStack-logo.png</PreviewImage>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="11.0" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="4.5" />
+  </Dependencies>
+</PackageManifest>
