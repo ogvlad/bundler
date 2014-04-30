@@ -113,17 +113,23 @@ namespace Bundler2012
 
         public void BundlerSaveOnLoadPackage_DocumentSaved(Document document)
         {
+            _outputWindow.WriteLine("Document saved. Running...");
             RunBundler(document.ProjectItem);
+            _outputWindow.WriteLine("Finished");
         }
 
         public void BundlerSaveOnLoadPackage_ItemAdded(ProjectItem projectItem)
         {
+            _outputWindow.WriteLine("Document added. Running...");
             RunBundler(projectItem);
+            _outputWindow.WriteLine("Finished");
         }
 
         public void BundlerSaveOnLoadPackage_ItemRenamed(ProjectItem projectItem, string oldFileName)
         {
+            _outputWindow.WriteLine("Document renamed. Running...");
             RunBundler(projectItem);
+            _outputWindow.WriteLine("Finished");
         }
 
         private bool IsAllowedExtension(string filename)
