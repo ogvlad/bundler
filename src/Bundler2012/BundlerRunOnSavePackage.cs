@@ -227,12 +227,24 @@ namespace Bundler2012
                     bundlerInfo.Process = null;
                 };
 
-                process.OutputDataReceived += (sender, args) => _outputWindow.WriteLine(args.Data);
-                process.ErrorDataReceived += (sender, args) => _outputWindow.WriteLine(args.Data);
+                process.OutputDataReceived += (sender, args) => { if (args.Data != null) { _outputWindow.WriteLine("OUT: " + args.Data); } };
+                process.ErrorDataReceived += (sender, args) => { if (args.Data != null) { _outputWindow.WriteLine("{0}", "ERR: " + ProcessErrorString(args.Data)); } };
 
                 process.Start();
                 process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
             }
+        }
+
+        private string ProcessErrorString(string errorString)
+        {
+            if (errorString == null)
+            {
+                return errorString;
+            }
+
+            errorString = new System.Text.RegularExpressions.Regex(@"\[(\d)+m").Replace(errorString, string.Empty);
+            return errorString;
         }
 
         private class BundlerProcessInfo
