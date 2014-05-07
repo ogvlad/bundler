@@ -34,6 +34,13 @@ namespace Bundler2012
             Write(format + Environment.NewLine, parameters);
         }
 
+        public void AddTaskItem(string taskItemOutputString, string taskItemText, string filePath, uint lineNumber)
+        {
+            if (_outputWindowPane == null) return;
+
+            _outputWindowPane.OutputTaskItemString(taskItemOutputString + Environment.NewLine, VSTASKPRIORITY.TP_HIGH, VSTASKCATEGORY.CAT_CODESENSE, "SUBCATEGORY", (int)(Microsoft.VisualStudio.Shell.Interop._vstaskbitmap.BMP_COMPILE), filePath, (lineNumber - 1), taskItemText);
+        }
+
         public void Clear()
         {
             _outputWindowPane.Clear();

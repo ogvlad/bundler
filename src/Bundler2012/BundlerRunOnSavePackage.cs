@@ -228,7 +228,27 @@ namespace Bundler2012
                 };
 
                 process.OutputDataReceived += (sender, args) => { if (args.Data != null) { _outputWindow.WriteLine("OUT: " + args.Data); } };
-                process.ErrorDataReceived += (sender, args) => { if (args.Data != null) { _outputWindow.WriteLine("{0}", "ERR: " + ProcessErrorString(args.Data)); } };
+                process.ErrorDataReceived +=
+                    (sender, args) =>
+                    {
+                        string errorString = args.Data;
+                        if (errorString != null)
+                        {
+                            string taskItemFilePath;
+                            uint taskItemLineNumber;
+                            string taskItemText;
+
+                            errorString = ProcessErrorString(errorString, out taskItemFilePath, out taskItemLineNumber, out taskItemText);
+                            if (!string.IsNullOrEmpty(taskItemFilePath) && File.Exists(taskItemFilePath))
+                            {
+                                _outputWindow.AddTaskItem("ERR: " + errorString, taskItemText, taskItemFilePath, taskItemLineNumber);
+                            }
+                            else
+                            {
+                                _outputWindow.WriteLine("{0}", "ERR: " + errorString);
+                            }
+                        } 
+                    };
 
                 process.Start();
                 process.BeginOutputReadLine();
@@ -236,14 +256,45 @@ namespace Bundler2012
             }
         }
 
-        private string ProcessErrorString(string errorString)
+        private string ProcessErrorString(string errorString, out string taskItemFilePath, out uint taskItemLineNumber, out string taskItemText)
         {
+            taskItemFilePath = null;
+            taskItemLineNumber = 0;
+            taskItemText = null;
+
             if (errorString == null)
             {
                 return errorString;
             }
 
-            errorString = new System.Text.RegularExpressions.Regex(@"\[(\d)+m").Replace(errorString, string.Empty);
+            errorString = new System.Text.RegularExpressions.Regex(System.Text.Encoding.ASCII.GetString(new byte[] { 27 }) + @"\[(\d)+m").Replace(errorString, string.Empty);
+
+            try
+            {
+
+                const string errorStringPart0 = "ParseError: ";
+                const string errorStringPart2 = " in ";
+                const string errorStringPart4 = " on line ";
+                const string errorStringPart6 = ", column ";
+                int indexOfErrorStringPart1 = (errorString.StartsWith(errorStringPart0) ? errorStringPart0.Length : -1);
+                int indexOfErrorStringPart2 = (indexOfErrorStringPart1 < 0 ? -1 : errorString.IndexOf(errorStringPart2, indexOfErrorStringPart1));
+                int indexOfErrorStringPart3 = (indexOfErrorStringPart2 < 0 ? -1 : indexOfErrorStringPart2 + errorStringPart2.Length);
+                int indexOfErrorStringPart4 = (indexOfErrorStringPart3 < 0 ? -1 : errorString.IndexOf(errorStringPart4, indexOfErrorStringPart3));
+                int indexOfErrorStringPart5 = (indexOfErrorStringPart4 < 0 ? -1 : indexOfErrorStringPart4 + errorStringPart4.Length);
+                int indexOfErrorStringPart6 = (indexOfErrorStringPart5 < 0 ? -1 : errorString.IndexOf(errorStringPart6, indexOfErrorStringPart5));
+
+                if (!(indexOfErrorStringPart6 < 0))
+                {
+                    taskItemText = errorString.Substring(indexOfErrorStringPart1, indexOfErrorStringPart2 - indexOfErrorStringPart1);
+                    taskItemFilePath = errorString.Substring(indexOfErrorStringPart3, indexOfErrorStringPart4 - indexOfErrorStringPart3);
+                    taskItemLineNumber = uint.Parse(errorString.Substring(indexOfErrorStringPart5, indexOfErrorStringPart6 - indexOfErrorStringPart5));
+                }
+            }
+            catch (Exception exception)
+            {
+                _outputWindow.WriteLine("{0}\n{1}", exception.ToString(), exception.StackTrace);
+            }
+
             return errorString;
         }
 
