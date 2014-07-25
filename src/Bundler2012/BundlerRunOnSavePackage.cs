@@ -52,7 +52,11 @@ namespace Bundler2012
         private DocumentEvents _documentEvents;
         private ProjectItemsEvents _projectItemEvents;
 
-        private static readonly string[] AllowedExtensions = new string[] { ".sass", ".less", ".css", ".coffee", ".js", ".bundle" };
+        //private static readonly string[] AllowedExtensions = new string[] { ".sass", ".less", ".css", ".coffee", ".js", ".bundle" };
+        private static readonly string[] LessExtensions = new string[] { ".less" };
+        private static readonly string[] CssExtensions = new string[] { ".css", "css.bundle" };
+        private static readonly string[] JsExtensions = new string[] { ".js", ".js.bundle" };
+        private static readonly string[] OtherExtensions = new string[] { ".sass", ".coffee" };
 
         private IDictionary<string, BundlerProcessInfo> bundlers = new Dictionary<string, BundlerProcessInfo>();
 
@@ -132,13 +136,54 @@ namespace Bundler2012
             _outputWindow.WriteLine("Finished");
         }
 
-        private bool IsAllowedExtension(string filename)
+        private enum FileType
         {
-            var extensionIndex = filename.LastIndexOf('.');
-            if (extensionIndex < 0) return false;
+            Unknown = 0,
+            Other = 1,
+            Less = 2,
+            Css = 3,
+            Js = 4
+        }
 
-            var extension = filename.Substring(extensionIndex);
-            return AllowedExtensions.Contains(extension);
+        //private bool IsAllowedExtension(string filename)
+        private bool CheckFilenameExtension(string filename, string[] extensions)
+        {
+            foreach (string extension in extensions)
+            {
+                if (filename.EndsWith(extension))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private FileType DetermineFileType(string filename)
+        {
+            if (CheckFilenameExtension(filename, LessExtensions))
+            {
+                return FileType.Less;
+            }
+            if (CheckFilenameExtension(filename, CssExtensions))
+            {
+                return FileType.Css;
+            }
+            if (CheckFilenameExtension(filename, JsExtensions))
+            {
+                return FileType.Js;
+            }
+            if (CheckFilenameExtension(filename, OtherExtensions))
+            {
+                return FileType.Other;
+            }
+            return FileType.Unknown;
+
+            //var extensionIndex = filename.LastIndexOf('.');
+            //if (extensionIndex < 0) return false;
+
+            //var extension = filename.Substring(extensionIndex);
+            //return AllowedExtensions.Contains(extension);
         }
 
         private void RunBundler(ProjectItem projectItem)
@@ -150,15 +195,17 @@ namespace Bundler2012
                 if (projectItem.ContainingProject == null) return;
 
                 // make sure this is a valid bundle file type
-                if (!IsAllowedExtension(projectItem.Name)) return;
+                //if (!IsAllowedExtension(projectItem.Name)) return;
+                FileType fileType = DetermineFileType(projectItem.Name);
+                if (fileType == FileType.Unknown)
+                {
+                    return;
+                }
 
                 // make sure the bundler exists
                 var directory = new FileInfo(projectItem.ContainingProject.FileName).Directory;
                 var bunderDirectory = directory.GetDirectories("bundler").FirstOrDefault();
                 if (bunderDirectory == null) return;
-
-                var bundleCommand = bunderDirectory.GetFiles("bundler.cmd").FirstOrDefault();
-                if (bundleCommand == null) return;
 
                 // make sure the files are in the bundler folder
                 var fileNames = new List<string>();
@@ -166,6 +213,39 @@ namespace Bundler2012
                     fileNames.Add(projectItem.FileNames[i]);
 
                 if (fileNames.Any(m => m.StartsWith(bunderDirectory.FullName))) return;
+
+                switch (fileType)
+                {
+                    case FileType.Less:
+                        var bundleLessCommand = bunderDirectory.GetFiles("bundler-less.cmd").FirstOrDefault();
+                        if (bundleLessCommand != null)
+                        {
+                            RunBundler(bundleLessCommand.FullName);
+                            return;
+                        }
+                        break;
+
+                    case FileType.Css:
+                        var bundleCssCommand = bunderDirectory.GetFiles("bundler-css.cmd").FirstOrDefault();
+                        if (bundleCssCommand != null)
+                        {
+                            RunBundler(bundleCssCommand.FullName);
+                            return;
+                        }
+                        break;
+
+                    case FileType.Js:
+                        var bundleJsCommand = bunderDirectory.GetFiles("bundler-js.cmd").FirstOrDefault();
+                        if (bundleJsCommand != null)
+                        {
+                            RunBundler(bundleJsCommand.FullName);
+                            return;
+                        }
+                        break;
+                }
+
+                var bundleCommand = bunderDirectory.GetFiles("bundler.cmd").FirstOrDefault();
+                if (bundleCommand == null) return;
 
                 RunBundler(bundleCommand.FullName);
             }
@@ -179,6 +259,7 @@ namespace Bundler2012
         private void RunBundler(string bundleCommandFullName)
         {
             Debug.WriteLine("Running bundler");
+            _outputWindow.WriteLine("Running bundler \"" + bundleCommandFullName + "\"");
 
             BundlerProcessInfo bundlerInfo = null;
 
