@@ -57,6 +57,15 @@ namespace Bundler2012
         private static readonly string[] CssExtensions = new string[] { ".css", "css.bundle" };
         private static readonly string[] JsExtensions = new string[] { ".js", ".js.bundle" };
         private static readonly string[] OtherExtensions = new string[] { ".sass", ".coffee" };
+        private const string BundlerProjectDirectoryName = "bundler";
+        private const string LessBundlerCommandFileName = "bundler-less.cmd";
+        private const string LessBundlerParametrizedCommandFileName = "bundler-less-p.cmd";
+        private const string CssBundlerCommandFileName = "bundler-css.cmd";
+        private const string CssBundlerParametrizedCommandFileName = "bundler-css-p.cmd";
+        private const string JsBundlerCommandFileName = "bundler-js.cmd";
+        private const string JsBundlerParametrizedCommandFileName = "bundler-js-p.cmd";
+        private const string GeneralBundlerCommandFileName = "bundler.cmd";
+        private const string GeneralBundlerParametrizedCommandFileName = "bundler-p.cmd";
 
         private IDictionary<string, BundlerProcessInfo> bundlers = new Dictionary<string, BundlerProcessInfo>();
 
@@ -204,7 +213,7 @@ namespace Bundler2012
 
                 // make sure the bundler exists
                 var directory = new FileInfo(projectItem.ContainingProject.FileName).Directory;
-                var bunderDirectory = directory.GetDirectories("bundler").FirstOrDefault();
+                var bunderDirectory = directory.GetDirectories(BundlerProjectDirectoryName).FirstOrDefault();
                 if (bunderDirectory == null) return;
 
                 // make sure the files are in the bundler folder
@@ -214,40 +223,73 @@ namespace Bundler2012
 
                 if (fileNames.Any(m => m.StartsWith(bunderDirectory.FullName))) return;
 
+                var configurationName = projectItem.ContainingProject.ConfigurationManager.ActiveConfiguration.ConfigurationName;
+
                 switch (fileType)
                 {
                     case FileType.Less:
-                        var bundleLessCommand = bunderDirectory.GetFiles("bundler-less.cmd").FirstOrDefault();
+                        var bundleLessCommand = bunderDirectory.GetFiles(LessBundlerParametrizedCommandFileName).FirstOrDefault();
                         if (bundleLessCommand != null)
                         {
-                            RunBundler(bundleLessCommand.FullName);
+                            RunBundler(bundleLessCommand.FullName, configurationName);
                             return;
                         }
+
+                        bundleLessCommand = bunderDirectory.GetFiles(LessBundlerCommandFileName).FirstOrDefault();
+                        if (bundleLessCommand != null)
+                        {
+                            RunBundler(bundleLessCommand.FullName, null);
+                            return;
+                        }
+
                         break;
 
                     case FileType.Css:
-                        var bundleCssCommand = bunderDirectory.GetFiles("bundler-css.cmd").FirstOrDefault();
+                        var bundleCssCommand = bunderDirectory.GetFiles(CssBundlerParametrizedCommandFileName).FirstOrDefault();
                         if (bundleCssCommand != null)
                         {
-                            RunBundler(bundleCssCommand.FullName);
+                            RunBundler(bundleCssCommand.FullName, configurationName);
                             return;
                         }
+
+                        bundleCssCommand = bunderDirectory.GetFiles(CssBundlerCommandFileName).FirstOrDefault();
+                        if (bundleCssCommand != null)
+                        {
+                            RunBundler(bundleCssCommand.FullName, null);
+                            return;
+                        }
+
                         break;
 
                     case FileType.Js:
-                        var bundleJsCommand = bunderDirectory.GetFiles("bundler-js.cmd").FirstOrDefault();
+                        var bundleJsCommand = bunderDirectory.GetFiles(JsBundlerParametrizedCommandFileName).FirstOrDefault();
                         if (bundleJsCommand != null)
                         {
-                            RunBundler(bundleJsCommand.FullName);
+                            RunBundler(bundleJsCommand.FullName, configurationName);
                             return;
                         }
+
+                        bundleJsCommand = bunderDirectory.GetFiles(JsBundlerCommandFileName).FirstOrDefault();
+                        if (bundleJsCommand != null)
+                        {
+                            RunBundler(bundleJsCommand.FullName, null);
+                            return;
+                        }
+
                         break;
                 }
 
-                var bundleCommand = bunderDirectory.GetFiles("bundler.cmd").FirstOrDefault();
+                var bundleCommand = bunderDirectory.GetFiles(GeneralBundlerParametrizedCommandFileName).FirstOrDefault();
+                if (bundleCommand != null)
+                {
+                    RunBundler(bundleCommand.FullName, configurationName);
+                    return;
+                }
+
+                bundleCommand = bunderDirectory.GetFiles(GeneralBundlerCommandFileName).FirstOrDefault();
                 if (bundleCommand == null) return;
 
-                RunBundler(bundleCommand.FullName);
+                RunBundler(bundleCommand.FullName, null);
             }
             catch (Exception e)
             {
@@ -256,7 +298,7 @@ namespace Bundler2012
             }
         }
 
-        private void RunBundler(string bundleCommandFullName)
+        private void RunBundler(string bundleCommandFullName, string configurationName)
         {
             Debug.WriteLine("Running bundler");
             _outputWindow.WriteLine("Running bundler \"" + bundleCommandFullName + "\"");
@@ -286,6 +328,7 @@ namespace Bundler2012
                 {
                     WindowStyle = ProcessWindowStyle.Hidden,
                     FileName = bundleCommandFullName,
+                    Arguments = configurationName,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -302,7 +345,7 @@ namespace Bundler2012
                     if (bundlerInfo.Queued)
                     {
                         bundlerInfo.Queued = false;
-                        RunBundler(bundleCommandFullName);
+                        RunBundler(bundleCommandFullName, configurationName);
                     }
 
                     bundlerInfo.Process = null;
